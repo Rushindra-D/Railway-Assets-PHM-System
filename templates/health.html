@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="analysis-wrapper">
+    <div class="page-header">
+        <h1>Health Analysis</h1>
+        
+        <div class="status-pill-large">
+            {% if status == "Critical" %}
+                <div class="alert critical pulse">🚨 CRITICAL: Immediate maintenance required!</div>
+            {% elif status == "Warning" %}
+                <div class="alert warning">⚠️ WARNING: Degradation detected</div>
+            {% else %}
+                <div class="alert healthy">✅ System Healthy</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="stat-card">
+            <span class="label">Current Health</span>
+            <div class="value highlight-green">{{ (current_health|float * 100)|round(1) }}%</div>
+            <div class="mini-progress"><div class="bar green" style="width: {{ current_health|float * 100 }}%"></div></div>
+        </div>
+
+        <div class="stat-card">
+            <span class="label">Status</span>
+            <div class="value status-text {{ status|lower }}">{{ status }}</div>
+        </div>
+
+        <div class="stat-card">
+            <span class="label">Fleet Average</span>
+            <div class="value">{{ (avg_health|float * 100)|round(1) }}%</div>
+        </div>
+
+        <div class="stat-card">
+            <span class="label">Min / Max Range</span>
+            <div class="value small">{{ (min_health|float * 100)|round(0) }}% — {{ (max_health|float * 100)|round(0) }}%</div>
+        </div>
+    </div>
+
+    <div class="analysis-main-grid">
+        <div class="chart-wrapper gauge-box">
+            <h3>Live Health Gauge</h3>
+            <div class="gauge-relative">
+                <canvas id="gaugeChart"></canvas>
+                <div class="gauge-center-text">
+                    <span class="p-value">{{ (current_health|float * 100)|round(0) }}%</span>
+                    <span class="p-label">Score</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-wrapper">
+            <h3>Health Trend (History)</h3>
+            <div class="canvas-holder">
+                <canvas id="healthChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-wrapper full-width">
+        <h3>Asset Health Distribution</h3>
+        <div class="canvas-holder-small">
+            <canvas id="histChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="health-data">
+{
+    "labels": {{ files | tojson | safe }},
+    "values": {{ health_data | tojson | safe }},
+    "current": {{ current_health | tojson | safe }}
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const dataObj = JSON.parse(document.getElementById("health-data").textContent);
+const values = dataObj.values;
+const healthValue = dataObj.current;
+
+// Global Chart Config
+Chart.defaults.color = '#8e8e93';
+Chart.defaults.font.family = 'Poppins';
+
+// 🟢 Gauge (Doughnut)
+new Chart(document.getElementById("gaugeChart"), {
+    type: "doughnut",
+    data: {
+        datasets: [{
+            data: [healthValue, 1 - healthValue],
+            backgroundColor: [healthValue < 0.3 ? "#ff3b30" : "#34c759", "rgba(255,255,255,0.05)"],
+            borderWidth: 0,
+            borderRadius: 10
+        }]
+    },
+    options: {
+        circumference: 180,
+        rotation: 270,
+        cutout: "85%",
+        plugins: { legend: { display: false } }
+    }
+});
+
+// 🔵 Trend Chart
+new Chart(document.getElementById("healthChart"), {
+    type: "line",
+    data: {
+        labels: dataObj.labels,
+        datasets: [{
+            label: "Health Index",
+            data: values,
+            borderColor: "#007aff",
+            backgroundColor: "rgba(0, 122, 255, 0.1)",
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+            pointRadius: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, min: 0, max: 1 },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// 🟢 Histogram
+const bins = new Array(10).fill(0);
+values.forEach(v => {
+    let idx = Math.min(Math.floor(v * 10), 9);
+    bins[idx]++;
+});
+
+new Chart(document.getElementById("histChart"), {
+    type: "bar",
+    data: {
+        labels: ["0-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%","80-90%","90-100%"],
+        datasets: [{
+            data: bins,
+            backgroundColor: "rgba(52, 199, 89, 0.6)",
+            borderRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { grid: { display: false },
+        title: {
+                    display: true,
+                    text: 'Health Index Range (%)',
+                    color: '#8e8e93',
+                    font: { size: 12, weight: 'bold' }
+                },
+                ticks: { color: '#8e8e93' } }
+        }
+    }
+});
+</script>
+{% endblock %}

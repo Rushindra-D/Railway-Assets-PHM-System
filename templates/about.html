@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="about-wrapper">
+    <header class="about-header">
+        <div class="badge">Technical Overview</div>
+        <h1>Railway <span class="highlight">PHM System</span></h1>
+        <p class="lead-text">
+            An advanced Prognostics and Health Management platform utilizing 
+            high-frequency vibration signal analysis to ensure railway operational safety.
+        </p>
+    </header>
+
+    <div class="about-grid">
+        
+        <section class="about-section objective-box">
+            <div class="section-icon">🎯</div>
+            <h3>Primary Objective</h3>
+            <p>
+                To provide real-time monitoring and predictive insights for railway asset health,
+                enabling proactive maintenance, minimizing unplanned downtime, and significantly 
+                reducing mechanical failure risks.
+            </p>
+        </section>
+
+        <section class="about-section features-box">
+            <h3>🔧 Key System Features</h3>
+            <div class="feature-tags">
+                <div class="f-item"><span>✔</span> Feature extraction from vibration signals</div>
+                <div class="f-item"><span>✔</span> Normalization using healthy baseline</div>
+                <div class="f-item"><span>✔</span> Anomaly detection via Isolation Forest</div>
+                <div class="f-item"><span>✔</span> Real-time Health Index computation</div>
+                <div class="f-item"><span>✔</span> Remaining Useful Life (RUL) estimation</div>
+            </div>
+        </section>
+
+        <section class="about-section tech-box">
+            <h3>📊 Engineering Stack</h3>
+            <div class="tech-chips">
+                <span class="chip">Python</span>
+                <span class="chip">Flask</span>
+                <span class="chip">SQLite</span>
+                <span class="chip">Scikit-learn</span>
+                <span class="chip">Chart.js</span>
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}

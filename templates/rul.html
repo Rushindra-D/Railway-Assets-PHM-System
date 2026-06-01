@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="analysis-wrapper">
+    <div class="page-header">
+        <h1>Predictive RUL Analysis <span class="asset-id">Projected Lifecycle</span></h1>
+        
+        <div class="status-pill-large">
+            {% if current_rul < 100 %}
+                <div class="alert critical pulse">🚨 CRITICAL: Maintenance required within 100 cycles!</div>
+            {% elif current_rul < 300 %}
+                <div class="alert warning">⚠️ WARNING: Accelerated RUL degradation detected</div>
+            {% else %}
+                <div class="alert healthy">✅ System Safe: Lifecycle within nominal parameters</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="rul-main-layout">
+        <aside class="rul-sidebar">
+            <div class="chart-wrapper gauge-box-alt">
+                <h3>Asset Life Remaining</h3>
+                <div class="gauge-relative">
+                    <canvas id="rulGauge"></canvas>
+                    <div class="gauge-center-text">
+                        <span class="p-value highlight-orange">{{ current_rul }}</span>
+                        <span class="p-label">Units Left</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mini-stats-stack">
+                <div class="mini-card">
+                    <span class="m-label">Fleet Avg RUL</span>
+                    <span class="m-value">{{ avg_rul }}</span>
+                </div>
+                <div class="mini-card">
+                    <span class="m-label">Critical Threshold</span>
+                    <span class="m-value red">100</span>
+                </div>
+                <div class="mini-card">
+                    <span class="m-label">Range (Min/Max)</span>
+                    <span class="m-value">{{ min_rul }} - {{ max_rul }}</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="rul-charts-area">
+            <div class="chart-wrapper">
+                <h3>Degradation Curve (RUL Trend)</h3>
+                <div class="canvas-holder">
+                    <canvas id="rulChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-wrapper">
+                <h3>RUL Density Distribution</h3>
+                <div class="canvas-holder">
+                    <canvas id="rulHist"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script type="application/json" id="rul-data">
+{
+    "labels": {{ files | tojson | safe }},
+    "values": {{ rul_data | tojson | safe }},
+    "current": {{ current_rul | tojson | safe }}
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const dataObj = JSON.parse(document.getElementById("rul-data").textContent);
+const values = dataObj.values;
+const rulValue = dataObj.current;
+const maxRUL = Math.max(...values);
+const normalizedRUL = Math.min(rulValue / maxRUL, 1);
+
+// 🟠 RUL Gauge (Amber Theme)
+new Chart(document.getElementById("rulGauge"), {
+    type: "doughnut",
+    data: {
+        datasets: [{
+            data: [normalizedRUL, 1 - normalizedRUL],
+            backgroundColor: [rulValue < 150 ? "#ff3b30" : "#ff9f0a", "rgba(255,255,255,0.05)"],
+            borderWidth: 0,
+            borderRadius: 20,
+            spacing: 5
+        }]
+    },
+    options: {
+        circumference: 220,
+        rotation: 250,
+        cutout: "82%",
+        plugins: { legend: { display: false } }
+    }
+});
+
+// 🔴 Trend Chart (Area Chart)
+new Chart(document.getElementById("rulChart"), {
+    type: "line",
+    data: {
+        labels: dataObj.labels,
+        datasets: [{
+            label: "Estimated RUL",
+            data: values,
+            borderColor: "#ff9f0a",
+            backgroundColor: "rgba(255, 159, 10, 0.1)",
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// 🟠 Histogram
+const bins = new Array(10).fill(0);
+values.forEach(v => {
+    let idx = Math.min(Math.floor((v / maxRUL) * 10), 9);
+    bins[idx]++;
+});
+
+new Chart(document.getElementById("rulHist"), {
+    type: "bar",
+    data: {
+        labels: ["<100", "200", "300", "400", "500", "600", "700", "800", "900", "1000+"],
+        datasets: [{
+            data: bins,
+            backgroundColor: "#ff9f0a",
+            borderRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+       scales: {
+            y: { 
+                display: true, // Switched to true to show the label
+                grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            x: { 
+                grid: { display: false },
+                title: {
+                    display: true,
+                    text: 'Estimated Cycles Remaining (RUL)',
+                    color: '#8e8e93',
+                    font: { size: 12, weight: 'bold' }
+                },
+                ticks: { color: '#8e8e93' }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
